@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="styles.css">
+  </head>
+  <body>
+    <textarea id="source">
+class: middle, center
+count: false
+background-image: url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# GeometricFlux.jl: Geometric Deep Learning on Flux
+
+### Yueh-Hua Tu @ JuliaCon 2020
+
+---
+class: middle, center
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Why graph neural network?
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Nowadays AI utilizes vector/matrix to represent data
+
+.center[![](../../pics/nowadays-ai.svg)]
+
+* Computer vision
+* Natural language processing
+* Speech
+* Biomedical signals
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Many scientific data use graph structure
+
+.center[![](../../pics/graph-ai.svg)]
+
+* Social networks in socail science
+* Traffic networks
+* Gene regulatory networks in biology
+* Molecular structure in chemistry
+* Knowledge graph 
+* 3D object surfaces in computer graphics
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Human gene coexpression network
+
+.center[<img src="../../pics/human_gene.jpg" width="70%">]
+
+> [picture source](http://bioinfow.dep.usal.es/coexpression/)
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Knowledge graph
+
+.center[<img src="../../pics/the-semantic-knowledge-graph.jpg" width="70%">]
+
+> [picture source](https://www.slideshare.net/treygrainger/the-semantic-knowledge-graph)
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Graphs are more representative than vectors
+
+.center[<img src="../../pics/graph-signal.svg" width="90%">]
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Graphs are discrete approximation to manifold
+
+.center[<img src="../../pics/manifold.png" width="50%">]
+
+.footnote[[Geometric deep learning: going beyond Euclidean data](https://arxiv.org/abs/1611.08097)]
+
+---
+class: middle, center
+background-image: url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+## Geometric Deep Learning
+
+--
+
+## = Graph/manifold + Deep Learning
+
+--
+
+# = Powerful!
+
+.footnote[[Geometric deep learning: going beyond Euclidean data](https://arxiv.org/abs/1611.08097)]
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# GeometricFlux.jl
+
+.center[<img src="../../pics/logo.svg" width="50%">]
+
+.footnote[https://github.com/yuehhua/GeometricFlux.jl]
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Features
+
+* Extend **Flux** deep learning framework in Julia
+* Support of CUDA GPU with **CuArrays**
+* Integrate with existing **JuliaGraphs** ecosystem
+* Support generic graph neural network architectures
+* (WIP) Integrate GNN benchmark datasets
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Graph convolutional layers
+
+.center[<img src="../../pics/gcn.svg" width="90%">]
+
+```julia
+GCNConv(adj_mat, num_features=>hidden, relu)
+```
+
+> [A Comprehensive Survey on Graph Neural Networks](https://arxiv.org/abs/1901.00596)
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Use it as you use Flux
+
+.center[<img src="../../pics/flux-logo.png" width="50%">]
+
+```julia
+model = Chain(GCNConv(g, 5120=>1000, relu),
+              GCNConv(g, 1000=>500, relu),
+              softmax)
+
+## Loss
+loss(x, y) = crossentropy(model(x), y)
+accuracy(x, y) = mean(onecold(model(x)) .== onecold(y))
+
+## Training
+ps = Flux.params(model)
+train_data = [(train_X, train_y)]
+opt = ADAM(0.01)
+evalcb() = @show(accuracy(train_X, train_y))
+
+Flux.train!(loss, ps, train_data, opt, cb=throttle(evalcb, 10))
+```
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Compatible with layers in Flux
+
+.center[<img src="../../pics/flux-logo.png" width="50%">]
+
+```julia
+## Model
+model = Chain(GCNConv(g, 5120=>1000, relu),
+              Dropout(0.5),
+              GCNConv(g, 1000=>500, relu),
+              Dense(500, 7),
+              softmax)
+```
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Layers
+
+### Convolution layers
+
+* GCNConv
+* GraphConv
+* ChebConv
+* GatedGraphConv
+* GATConv
+* EdgeConv
+
+--
+
+### Pooling layers
+
+* GlobalPool
+* TopKPool
+* MaxPool
+* MeanPool
+* sum/sub/prod/div/max/min/mean pool
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Special layers for autoencoders
+
+.center[<img src="../../pics/vgae.svg" width="100%">]
+
+```julia
+GAE(enc, InnerProductDecoder(σ))
+VGAE(VariationalEncoder(enc, h_dim, z_dim), InnerProductDecoder(σ))
+```
+
+* VariationalEncoder (WIP)
+* InnerProductDecoder
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Construct layers from SimpleGraph/SimpleWeightedGraph
+
+.center[<img src="../../pics/juliagraphs.png" width="30%">]
+
+It allows you to cache a *static* graph in layer for computational efficiency.
+
+```julia
+g = SimpleGraph(5)
+add_edge!(1, 2); add_edge!(3, 4)
+
+GCNConv(g, num_features=>1000, relu)
+```
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# AD-ready with Zygote
+
+.center[<img src="../../pics/zygote-logo.png" width="50%">]
+
+GeometricFlux support AD with Zygote on CPU and GPU!
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Use message passing scheme
+
+.center[<img src="../../pics/MPNN-2.svg" width="50%">]
+
+.center[<img src="../../pics/MPNN.png" width="30%">]
+
+* $h_v^t$: vertex features
+* $e_{uv}$: edge features
+* $N(v)$: neighbors of vertex $v$
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Message passing scheme API
+
+#### Define your message-passing layer
+
+```julia
+struct MyMessagePassingLayer <: MessagePassing
+    ...
+end
+```
+
+--
+
+#### Override your message function
+
+```julia
+message(mp::T, x_i, x_j, e_ij) where {T<:MessagePassing} = x_j
+```
+
+--
+
+#### Choose your aggregation function
+
+```julia
+aggregate_neighbors(mp::T, aggr::Symbol, ...) where {T<:MessagePassing}
+```
+
+--
+
+#### Override your update function
+
+```julia
+update(mp::T, m, x) where {T<:MessagePassing} = m
+```
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Graph network
+
+.center[<img src="../../pics/gn-5.svg" width="100%">]
+
+.footnote[[Relational inductive biases, deep learning, and graph networks](https://arxiv.org/abs/1806.01261)]
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Define your own graph network block as layer
+
+```julia
+struct MyGNBlock <: GraphNet
+    ...
+end
+```
+
+--
+
+.center[<img src="../../pics/gn-4.svg" width="100%">]
+
+```julia
+Chain(MyGNBlock(...),
+      MyGNBlock(...),
+      MyGNBlock(...))
+```
+
+.footnote[[Relational inductive biases, deep learning, and graph networks](https://arxiv.org/abs/1806.01261)]
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Graph network API
+
+### Update functions
+
+```julia
+update_edge(gn::T, e, vi, vj, u) where {T<:GraphNet} = e
+update_vertex(gn::T, ē, vi, u) where {T<:GraphNet} = vi
+update_global(gn::T, ē, v̄, u) where {T<:GraphNet} = u
+```
+
+--
+
+### Aggregate functions
+
+```julia
+aggregate_neighbors(gn::T, aggr::Symbol, ...) where {T<:GraphNet}
+aggregate_edges(gn::T, aggr::Symbol, ...) where {T<:GraphNet}
+aggregate_vertices(gn::T, aggr::Symbol, ...) where {T<:GraphNet}
+```
+
+Feel free to override!
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Graph network is compatable with message passing scheme
+
+```julia
+abstract type MessagePassing <: GraphNet end
+```
+
+All behaviors are inherited from graph network and overrided by message-passing scheme.
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Variable graph input is supported
+
+### What if I want to train my model with different graph structure?
+
+.center[<img src="../../pics/fg.svg" width="60%">]
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# FeaturedGraph goes through the whole network
+
+.center[<img src="../../pics/fg2.svg" width="60%">]
+
+* Support `GraphNetwork` and `MessagePassing`
+* Support linear algebra related calculations
+* Integrates well with other GeometricFlux layers
+
+--
+
+#### Graph-free layer can be used with FeaturedGraph input
+
+```julia
+GCNConv(num_features=>1000, relu)
+```
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Working examples
+
+* Graph convolution network (GCN)
+* Graph autoencoder (GAE)
+
+---
+class: middle
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Performance
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+.center[<img src="../../pics/gpu_scatter.svg" width="80%">]
+
+Thank you, Tim!
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+.center[<img src="../../pics/cpu_scatter.svg" width="80%">]
+
+Oops!
+
+---
+background-image: linear-gradient(rgba(255, 255, 255, 1.0), rgba(255, 255, 255, 0.5)), url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Future work
+
+* Support sparse array computation
+  * on CPU and performance optimization
+  * on cuda (CUDA/CUSPARSE)
+* More layers/models
+* Datasets inetegration
+
+--
+
+### Near future
+
+* Example models:
+  * Graph attention network (GAT)
+  * Variational graph autoencoder (VGAE)
+  * Neural graph differential equations (GDE)
+* Documentation and tutorials
+* Increase test cases
+* Improve scatter performance on CPU
+* Move to FluxML
+
+---
+class: middle, center
+background-image: url(../../pics/juliacon2020-background.png)
+background-size: 100% auto
+background-position: bottom
+
+# Thank you for attention
+
+### Pull request and issues are welcome.
+
+*This slides are generated by Remark.jl*    </textarea>
+
+    <script src="remark.min.js" type="text/javascript"></script>
+    <script src="katex.min.js"></script>
+    <script src="auto-render.min.js"></script>
+    <link rel="stylesheet" href="katex.min.css">
+    <script type="text/javascript">
+        var options = {"ratio":"16:9"};
+        var renderMath = function() {
+        // renderMathInElement(document.body);
+        // or if you want to use $...$ for math,
+        renderMathInElement(document.body, {delimiters: [ // mind the order of delimiters(!?)
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false},
+            {left: "\\[", right: "\\]", display: true},
+            {left: "\\(", right: "\\)", display: false},
+        ]});
+        }
+
+        var slideshow = remark.create(options, renderMath);
+
+        </script>
+  </body>
+</html>
